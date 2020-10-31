@@ -13,6 +13,9 @@ uint8_t gyroScale=2000;
 //todo : getter and setter for scales
 
 //#define debugPPG
+//#define generateTimestampTests
+#define generateAccelTests
+#define generatePpgTests
 
 BLEService PPGService = BLEService(0x1165);
 BLEService IMUService = BLEService(0x1101);
@@ -140,25 +143,79 @@ void updatePPG(){
     }
 }
 void configureIMU(){
-  mySensor.beginAccel();
-  mySensor.beginGyro();
-  mySensor.beginMag();
+mySensor.beginAccel();
+mySensor.beginGyro();
+mySensor.beginMag();
 }
 
-void updateAcc(){
+void updateAcc() {  
 if (mySensor.accelUpdate() == 0) {
     //read sensor 
     accelBuf=mySensor.getAccelBuffer();
     //read timestamp
+    
     uint32_t timestamp=millis();
+    
+    // Bit shift operations below alter the value,
+    // copy another one for loggin purposes if needed.
+    #ifdef generateTimestampTests
+        uint32_t timestampTest = timestamp;
+    #endif
+    
     bufAcc[3] = (uint8_t)timestamp;
     bufAcc[2] = (uint8_t)(timestamp>>=8);
     bufAcc[1] = (uint8_t)(timestamp>>=8);
     bufAcc[0] = (uint8_t)(timestamp>>=8);
-    bufAcc[4] = 16;
-    for(int i=5;i<=10;i++){
-      bufAcc[i] = accelBuf[i-5];
-    }
+    for(int i=4;i<=10;i++){
+      bufAcc[i] = accelBuf[i-4];
+    }           
+
+      #ifdef generateTimestampTests
+        // Serial logger cannot handle printing every line
+        // So make it about 1 in 45 where it prints
+        if (random(0, 100) % 99 == 0) {        
+          Serial.print("ByteMathTimestampTest(");
+          Serial.print(bufAcc[0]);
+          Serial.print(", ");
+          Serial.print(bufAcc[1]);
+          Serial.print(", ");
+          Serial.print(bufAcc[2]);
+          Serial.print(", ");
+          Serial.print(bufAcc[3]);
+          Serial.print(", ");
+          Serial.print(timestampTest);
+          Serial.print("),");
+          Serial.println();
+        }
+     #endif   
+
+      #ifdef generateAccelTests
+        // Serial logger cannot handle printing every line
+        // So make it about 1 in 45 where it prints
+        if (random(0, 100) % 99 == 0) {        
+          Serial.print("ByteMathAccelTest(");
+          Serial.print(bufAcc[4]);
+          Serial.print(", ");
+          Serial.print(bufAcc[5]);
+          Serial.print(", ");
+          Serial.print(mySensor.accelX(), 12);
+          Serial.print(", ");
+          Serial.print(bufAcc[6]);
+          Serial.print(", ");
+          Serial.print(bufAcc[7]);
+          Serial.print(", ");
+          Serial.print(mySensor.accelY(), 12);
+          Serial.print(", ");
+          Serial.print(bufAcc[8]);
+          Serial.print(", ");
+          Serial.print(bufAcc[9]);
+          Serial.print(", ");
+          Serial.print(mySensor.accelZ(), 12);
+          Serial.print("),");
+          Serial.println();
+        }
+     #endif
+    
     dataReady=true; 
   } else {
     Serial.println("Cannod read accel values");
@@ -198,13 +255,15 @@ if (mySensor.magUpdate() == 0) {
   }
 }
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  while(!Serial); //Wait for Serial to be ready 
+  Serial.print("Begin Serial port 9600 baud");
   /*init IMU*/
   configureIMU();
   /*Init PPG*/
   if (particleSensor.begin() == false){
     Serial.println("MAX30105 was not found. Please check wiring/power. ");
-    while (1);
+    //while (1);
     }
   configurePPG();
   Serial.println(F("Custom TimeStamp Service and Characteristic"));
@@ -258,25 +317,25 @@ void loop() {
             //Serial.print("rawPPGCharacteristic updated to: ");
             //Serial.println(timeStampValue); 
             }else{
-            Serial.println("ERROR: Notify not set in the CCCD or not connected!");
+            //Serial.println("ERROR: Notify not set in the CCCD or not connected!");
             }
        if ( AccCharacteristic.notify(bufAcc,11) ){
             //Serial.print("IMUCharacteristic updated to: ");
             //Serial.println(timeStampValue);             
             }else{
-            Serial.println("ERROR: Notify not set in the CCCD or not connected!");
+            //Serial.println("ERROR: Notify not set in the CCCD or not connected!");
             }
         if ( GyroCharacteristic.notify(bufGyro,11) ){
             //Serial.print("IMUCharacteristic updated to: ");
             //Serial.println(timeStampValue);             
             }else{
-            Serial.println("ERROR: Notify not set in the CCCD or not connected!");
+            //Serial.println("ERROR: Notify not set in the CCCD or not connected!");
             }
          if ( MagCharacteristic.notify(bufMag,11) ){
             //Serial.print("IMUCharacteristic updated to: ");
             //Serial.println(timeStampValue);             
             }else{
-            Serial.println("ERROR: Notify not set in the CCCD or not connected!");
+            //Serial.println("ERROR: Notify not set in the CCCD or not connected!");
             }    
         dataReady=false; 
         }
